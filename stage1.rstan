@@ -1,0 +1,234 @@
+functions {
+
+    // ------------------------------------------------------------------
+    //        helper func 
+    // ------------------------------------------------------------------
+    vector vpow(vector V, real p){
+    
+        vector[rows(V)]   Vh;
+        int                N;
+    
+        N = rows(V);
+        
+        for (i in 1:N){
+            Vh[i] = V[i]^p;
+        }
+        
+        return Vh;
+    }
+
+
+    // --------------------------------------------------------------------
+    // compute the spatial covariance
+    // --------------------------------------------------------------------
+    matrix SIG(matrix[] dist, real nugg, real[] phi){
+               
+
+    matrix[rows(dist[1]),rows(dist[1])]       vec;        // final cov
+    matrix[rows(dist[1]),rows(dist[1])]     Inugg;        // final nug
+    matrix[rows(dist[1]),rows(dist[1])]       dum;        // log(cov)
+    int                                       N;
+    
+    N = rows(dist[1]);
+    // --------------------------------------------------------------
+    //               covariance construction
+    // --------------------------------------------------------------
+    
+    // the complex model part (model with x and with tuning params)
+
+
+    dum = rep_matrix(0,N,N);
+    for (i in 1:dims(dist)[1]){
+        dum = dum - phi[i] * dist[i,,];
+    }
+    vec  = exp(dum);
+       
+    Inugg = diag_matrix(rep_vector(nugg,N));
+        
+    vec = vec + Inugg;
+    
+    
+       
+    // get it nice and numerically positive definite
+    vec = 0.5*vec + 0.5*vec';
+       
+    return vec;
+    }
+    
+    // ------------------------------------------------------------------
+    //        nonlinear regression mean func - scaled power law type func
+    // ------------------------------------------------------------------
+    vector mean_func(int N,int M,vector betax, vector E, vector Y, vector K, vector eps, matrix scaling, vector yscaling){
+        
+        vector[N*M]     mu;
+        vector[N]        f;
+        vector[N]     Ehat;
+        vector[N]     Yhat;
+        vector[N]     Khat;
+        vector[M]     epshat;
+        
+        // nonlinear regression bit - elastic part + inelastic = each "survives" at different
+        //                            strains (eg elastic low strain, plastic large strain)
+        //
+        // sig = [(eps * E)^-b5+(b1*sig0 + b4*K*(b2 + b3*eps)^-b5)]^{-1/b5}
+        //
+        
+        
+        // choose to scale things so that the derived betas' have some physical meaning
+        // and we can interpret them / evaluate them against our intuition
+        Ehat   = E  *(scaling[2,1]-scaling[1,1]) + scaling[1,1];
+        Yhat   = Y  *(scaling[2,2]-scaling[1,2]) + scaling[1,2];
+        Khat   = K  *(scaling[2,3]-scaling[1,3]) + scaling[1,3];
+        epshat = eps*(scaling[2,4]-scaling[1,4]) + scaling[1,4];
+        
+        
+        
+        for (i in 1:M){
+            f = vpow(epshat[i]*Ehat*1e3/(1-0.3^2),-betax[5]);
+            f = vpow(f + vpow(betax[1]*Yhat + betax[4]*Khat*1e3*(betax[2]+betax[3]*epshat[i]),-betax[5]),-(1/betax[5]));
+            f = (f-yscaling[1])/yscaling[2];
+            for (j in 1:N){
+                mu[N*(i-1)+j] = f[j];
+            }
+        }
+        
+        return mu;
+    }
+
+    //-------------------------------------------------------------------
+    // function is to recursively make a block row vector with scaled matrices
+    // in each position (growing from left to right)
+    //-------------------------------------------------------------------
+    matrix block_row_scaled_matrix(matrix A, row_vector scale);
+    matrix block_row_scaled_matrix(matrix A, row_vector scale){
+        int   n;
+        
+        n = cols(scale);
+        if (n==2){
+            return append_col(scale[1]*A,scale[2]*A);
+        }
+        else{
+            return append_col(scale[1]*A,block_row_scaled_matrix(A,tail(scale,n-1)));
+        }
+    }
+    //-------------------------------------------------------------------
+    // function is to recursively make a block row vector with matrices
+    // from multidim array in each position (growing from top to bottom)
+    //-------------------------------------------------------------------
+    matrix block_col_matrix(matrix[] A);
+    matrix block_col_matrix(matrix[] A){
+        int   n;
+        
+        n = dims(A)[1];
+        if (n==2){
+            return append_row(A[1,,],A[2,,]);
+        }
+        else{
+            return append_row(A[1,,],block_col_matrix(tail(A,n-1)));
+        }
+    }
+    //-------------------------------------------------------------------
+    // function to build the kronecher product using the defined recursive
+    // formulations
+    //-------------------------------------------------------------------
+    
+    matrix kron(matrix A, matrix B){
+    
+        matrix[rows(B),cols(A)*cols(B)]           vec[rows(A)];
+        matrix[rows(A)*rows(B),cols(A)*cols(B)]            out;
+        
+        for (i in 1:rows(A)){
+            vec[i,,] = block_row_scaled_matrix(B,sub_row(A,i,1,cols(A)));
+        }
+        
+        out = block_col_matrix(vec);
+        return out;
+    
+    }
+  }
+data {
+  int<lower=1>                                N; // total number of points x in design
+  int<lower=1>                                M; // total number of knots 
+  vector[2]                            sigprior; // sig2 for each of the q outputs
+  vector[2*4]                          phiprior;
+  matrix[5,2]                          betaprior;
+  real                                     Nnugg;
+  real                                     Mnugg;
+  vector[M*N]                                   y; // stacked e.g. (y1(x1),...,y1(xN),y2(x1),...,yq(xN)
+  matrix[N,N]                          distN[3];
+  matrix[M,M]                          distM[1];
+  matrix[N,3]                          design;
+  vector[M]                              eps;
+  matrix[2,4]                        scaling;
+  vector[2]                        yscaling;
+}
+parameters {
+  real                               r_betax[5];
+  real<lower=0>                            sig2;
+  real<lower=0>                          phi[4];
+}
+
+transformed parameters{
+
+    matrix[N,N]    LN;
+    matrix[M,M]    LM;
+    matrix[N,N]   SigN;
+    matrix[M,M]   SigM;
+    matrix[N,N]   inv_Cn;
+    matrix[M,M]   inv_Cm;
+    vector[N*M]    mu;
+    vector[N*M]    err;
+    vector[5]     betax;
+    
+    for (i in 1:5){
+        betax[i]=exp(r_betax[i]);
+    }
+    
+    {
+        SigN = SIG(distN,Nnugg,head(phi,3));
+        SigM = SIG(distM,Mnugg,tail(phi,1));
+        
+        
+        LM = cholesky_decompose(SigM);
+        LN = cholesky_decompose(SigN);
+    
+        inv_Cm = mdivide_right_tri_low(mdivide_left_tri_low(LM,diag_matrix(rep_vector(1,M)))',LM)';
+        inv_Cn = mdivide_right_tri_low(mdivide_left_tri_low(LN,diag_matrix(rep_vector(1,N)))',LN)';
+    
+    
+        //------------------------------------------
+        //   mu and errors
+        //------------------------------------------
+        mu = mean_func(N,M,betax,sub_col(design,1,1,N),sub_col(design,1,2,N),sub_col(design,1,3,N),eps,scaling,yscaling);
+        err = y-mu;
+        
+        
+    }
+
+}
+
+model {
+
+  //------------------------------------------
+  //   setup the priors
+  //------------------------------------------
+
+  1/sig2 ~ gamma(sigprior[1],sigprior[2]);
+  
+  for (i in 1:4) {
+	phi[i] ~ gamma(phiprior[2*i-1],phiprior[2*i]);
+  }
+  for (i in 1:5) {
+	r_betax[i] ~ normal(betaprior[i,1],betaprior[i,2]);
+  }
+
+  
+  //------------------------------------------
+  //   likelihood function
+  //------------------------------------------
+  target +=  -2*N*sum(log(diagonal(LM))) - 2*M*sum(log(diagonal(LN))) - N*M*log(sig2);
+
+  target += -err'*(kron(inv_Cm,inv_Cn)*err)/sig2;
+
+}
+
