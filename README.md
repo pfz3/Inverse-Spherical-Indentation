@@ -15,6 +15,8 @@ The solution methodology follows the strategy layed out in the seminal work by K
 
 Our exact implementation is a bit different and closer to a standard regression analysis; Kennedy and O'Hagan sought to build a *predictive* model by *fusing* experiments with simulations. In the indentation setting we don't care about predicting future indentation responses - the experiments are a means to an ends which enable inference of the underlying intrinsic mechanical behavior. 
 
+Similar methodologies have been utilized for inferring single-crystal elastic constant point estimates [[6](https://www.sciencedirect.com/science/article/pii/S1359645414005394)]. In this work however a polynomial chaos expansion is utilized as a surrogate model as opposed to a GP. One advantage of GPs for deterministic computer simulations however is that the GP is an interpolator! Other methods are regressors and therefore some of the response is attributed to noise and therefore information is "lost".
+
 For additional detail please refer to our paper provided above.
 
 ## Surrogate Model
