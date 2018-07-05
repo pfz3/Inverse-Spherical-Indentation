@@ -6,9 +6,14 @@ The experimental data utilized in these methods corresponds to indentation stres
 
 ## Methodology
 
-The code in this repo solves the inverse indentation problem: given indentation data we wish to extract the uniaxial equivalent mechanical constitute properties. Since there are no closed form solution which describe the post-elastic indentation response a complex finite element (FE) model is useful. FE models however can be costly - in our simulations a isotropic linear-hardening asymmetric model required 10-25 hrs per simulation to run. Therefore using the FE model directly in unfeasible. 
+The code in this repo solves the inverse indentation problem: given indentation data we wish to extract the uniaxial equivalent mechanical constitute properties. Since there are no closed form solutions which describe the post-elastic indentation response a complex finite element (FE) model may be used. FE models however can be costly - in our simulations an isotropic linear-hardening asymmetric model required 10-25 hrs per simulation to run. Therefore using the FE model directly in unfeasible. 
 
-The solution methodology follows the strategy layed out in the seminal work by Kennedy and O'Hagan [[4](https://rss.onlinelibrary.wiley.com/doi/abs/10.1111/1467-9868.00294)]. (1) Build a Gaussian process (GP) model of the complex computer code from a reasonable number of runs (2) use a Bayesian strategy to perform the inversion. Our exact implementation is a bit different and closer to a standard regression analysis; Kennedy and O'Hagan sought to build a *predictive* model by *fusing* experiments with simulations. In the indentation setting we don't care about predicting future indentation responses - the experiments are a means to an ends which enable inference of the underlying intrinsic mechanical behavior. 
+The solution methodology follows the strategy layed out in the seminal work by Kennedy and O'Hagan [[4](https://rss.onlinelibrary.wiley.com/doi/abs/10.1111/1467-9868.00294)]. 
+
+1. Build a Gaussian process (GP) model of the complex computer code from a reasonable number of runs
+2. use a Bayesian strategy to perform the inversion. 
+
+Our exact implementation is a bit different and closer to a standard regression analysis; Kennedy and O'Hagan sought to build a *predictive* model by *fusing* experiments with simulations. In the indentation setting we don't care about predicting future indentation responses - the experiments are a means to an ends which enable inference of the underlying intrinsic mechanical behavior. 
 
 For additional detail please refer to our paper provided above.
 
@@ -16,7 +21,9 @@ For additional detail please refer to our paper provided above.
 
 The surrogate model is built by evaluating the surrogate model at specified settings (the experimental design). A  constrained Maximum Projection design was utilized [[5](https://academic.oup.com/biomet/article-abstract/102/2/371/246859)]. Note a very nice R-package exists for MaxPro [[6](https://cran.r-project.org/web/packages/MaxPro/index.html)]. Constraint is imposed by using rejection sampling and generating the MaxPro design conditional on some sample population of candidate points satisfying the constraints - see the rejoinder corresponding to [[7](https://www.tandfonline.com/doi/abs/10.1080/08982112.2015.1100447)]. The constraint says that the hardening slope cannot be larger than the modulus (no doy). 
 
-The surrogate was then built in the statistical programming language RStan [[8](http://mc-stan.org/users/interfaces/rstan)]. The model was built using 30 FE evaluations and validated on another 50-run MaxPro design. The validation is exceptionally good [see pic](https://github.com/pfz3/Inverse-Spherical-Indentation/blob/master/val.png).
+The surrogate was then programmed in the statistical programming language RStan [[8](http://mc-stan.org/users/interfaces/rstan)]. I chose to do everything from scratch because off the shelf GP packages couldn't do exactly what I wanted. The model can be considered a multiple-output function - one finite element simulations many values of stress-strain pairs. Things get a bit burdensome if you don't find and exploit some structure so we utilized a Kronecker product formulation to make things efficient - see the paper. Further the inference part was a bit messy as well with some heteroskedasticity present in the data. Therefore the problem was sufficiently specific that investing in a tailored solution seemed appropriate.
+
+The model was built using 30 FE evaluations and validated on another 50-run MaxPro design. A "fancy" mean function was utilized that gets very "close" to emulating the FE model itself. Adding the GP on top of that makes things even better. The validation is exceptionally good [see pic](https://github.com/pfz3/Inverse-Spherical-Indentation/blob/master/val.png). The RMSPE is ~6 GPa... Try to beat that! I double-dog-dare you!
 
 ## Example
 
