@@ -6,7 +6,7 @@ The experimental data utilized in these methods corresponds to indentation stres
 
 ## Methodology
 
-The code in this repo solves the inverse indentation problem: given indentation data we wish to extract the uniaxial equivalent mechanical constitute properties. Since there are no closed form solutions which describe the post-elastic indentation response a complex finite element (FE) model may be used. FE models however can be costly - in our simulations an isotropic linear-hardening asymmetric model required 10-25 hrs per simulation to run. Therefore using the FE model directly in unfeasible. 
+The code in this repo solves the inverse indentation problem: given indentation data we wish to extract the uniaxial equivalent mechanical constitute properties. Since there are no closed form solutions which describe the post-elastic indentation response a complex finite element (FE) model may be used. FE models however can be costly - in our simulations an isotropic linear-hardening asymmetric model required 10-25 hrs per simulation to run. Therefore using the FE model directly in infeasible. 
 
 The solution methodology follows the strategy layed out in the seminal work by Kennedy and O'Hagan [[4](https://rss.onlinelibrary.wiley.com/doi/abs/10.1111/1467-9868.00294)]. 
 
