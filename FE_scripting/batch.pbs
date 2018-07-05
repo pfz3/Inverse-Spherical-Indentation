@@ -1,0 +1,31 @@
+# batch pbs file
+#PBS -N sim_30
+#PBS -l nodes=1:ppn=2
+#PBS -l mem=2gb
+#PBS -l walltime=150:00:00
+#PBS -q prometheus
+#PBS -j oe
+#PBS -o sim_30.out
+#PBS -m abe
+#PBS -M patxifernandezzelaia@gmail.com
+#PBS -V
+
+module load abaqus/6.16
+module load anaconda3/4.1.1
+
+cd "/nv/hp22/pfz3/scratch/LH_u_ofhc_cons_3/30"
+echo "cd = $PWD"
+if [ -f "sim_30.lck" ];
+then
+    echo "deleting sim_30.lck file"
+    rm sim_30.lck
+else
+    echo "sim_30.lck not detected"
+fi
+
+echo "------ Begining Abaqus FEA ------"
+abaqus cpus=2 memory='2 gb' job=sim_30 interactive input=LH_u.inp
+echo "------ End of Abaqus FEA   ------"
+
+abaqus python odbreader.py 30
+python postprocess.py 30
