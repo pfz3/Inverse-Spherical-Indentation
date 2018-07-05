@@ -1,1 +1,23 @@
 # Inverse Spherical Indentation
+
+Methods employed in this repo are explained in full detail in our recent publication [Fernandez-Zelaia et al. 2018](https://www.sciencedirect.com/science/article/pii/S0264127518302168). Please appropriately reference that work and this repo if you decide to use these codes.
+
+The experimental data utilized in these methods corresponds to indentation stress-strain curves as defined by Pathak and Kalidindi's original works [[1](https://www.sciencedirect.com/science/article/pii/S1359645408002413),[2](https://www.sciencedirect.com/science/article/pii/S1359646208008221)]. There have been a number of studies published since those early works and an excellent summary can be found in [[3](https://www.sciencedirect.com/science/article/pii/S0927796X15000157)].
+
+## Methodology
+
+The code in this repo solves the inverse indentation problem: given indentation data we wish to extract the uniaxial equivalent mechanical constitute properties. Since there are no closed form solution which describe the post-elastic indentation response a complex finite element (FE) model is useful. FE models however can be costly - in our simulations a isotropic linear-hardening asymmetric model required 10-25 hrs per simulation to run. Therefore using the FE model directly in unfeasible. 
+
+The solution methodology follows the strategy layed out in the seminal work by Kennedy and O'Hagan [[4](https://rss.onlinelibrary.wiley.com/doi/abs/10.1111/1467-9868.00294)]. (1) Build a Gaussian process (GP) model of the complex computer code from a reasonable number of runs (2) use a Bayesian strategy to perform the inversion. Our exact implementation is a bit different and closer to a standard regression analysis; Kennedy and O'Hagan sought to build a *predictive* model by *fusing* experiments with simulations. In the indentation setting we don't care about predicting future indentation responses - the experiments are a means to an ends which enable inference of the underlying intrinsic mechanical behavior. 
+
+For additional detail please refer to our paper provided above.
+
+## Surrogate Model
+
+The surrogate model is built by evaluating the surrogate model at specified settings (the experimental design). A  constrained Maximum Projection design was utilized [[5](https://academic.oup.com/biomet/article-abstract/102/2/371/246859)]. Note a very nice R-package exists for MaxPro [[6](https://cran.r-project.org/web/packages/MaxPro/index.html)]. Constraint is imposed by using rejection sampling and generating the MaxPro design conditional on some sample population of candidate points satisfying the constraints - see the rejoinder corresponding to [[7](https://www.tandfonline.com/doi/abs/10.1080/08982112.2015.1100447)]. The constraint says that the hardening slope cannot be larger than the modulus (no doy). 
+
+The surrogate was then built in the statistical programming language RStan [[8](http://mc-stan.org/users/interfaces/rstan)]. The model was built using 30 FE evaluations and validated on another 50-run MaxPro design. The validation is exceptionally good [see pic](https://github.com/pfz3/Inverse-Spherical-Indentation/blob/master/val.png).
+
+## Example
+
+Data from a single indentation experiment is provided. The material indented is a copper sample subject to severe plastic deformation. The [posterior predicted curve](https://github.com/pfz3/Inverse-Spherical-Indentation/blob/master/experimental/002_mcmc_posterior_mean.png) fits the data exceptionally well. Further note that in this code I've included some additional complexity to account for the apparent [heteroskedastic noise behavior](https://github.com/pfz3/Inverse-Spherical-Indentation/blob/master/experimental/002_mcmc_residuals.png). I tried a common transformation (Box-Cox) and also a more modern transformation ([Yeo-Johnson](https://academic.oup.com/biomet/article-abstract/87/4/954/232908)) yet neither was able to account for the heteroskedasticity.
