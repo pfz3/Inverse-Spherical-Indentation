@@ -398,7 +398,7 @@ Eprior=((Eprior*(1-0.3**2)/1000)-scaling[1,1])/(scaling[2,1]-scaling[1,1])
 Yindprior=(Yindprior-scaling[1,2])/(scaling[2,2]-scaling[1,2])
 
 
-sigprior = c(5,1)
+sigprior = c(50,1)
 xprior=c(Eprior,Esig,Yindprior,0.5,0.5,1)
 
 
@@ -501,7 +501,7 @@ dev.off()
 
 mcmc <- stan(
   file='stage3.rstan',         # Stan program
-  data = c(inputdata2,list('epsbeta'=map2$par$epsbeta)),            # named list of data
+  data = c(inputdata2,list('epsbeta'=map2$par$epsbetahat)),            # named list of data
   chains = 1,                # number of Markov chains
   warmup=1000,               # warmup
   iter = 1000+10*1000,             # total number of iterations per chain

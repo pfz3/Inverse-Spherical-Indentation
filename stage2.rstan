@@ -190,6 +190,7 @@ transformed parameters{
     real                                 sX[3];
     matrix[Me,Me]                    inv_sig2e;
 	vector[Me]                        sig2epsv;
+    vector[3]                       epsbetahat;
 	
     {
         vector[3]                               Xv;
@@ -202,6 +203,10 @@ transformed parameters{
         vector[Me]                          dummy2;
         matrix[Me,3]                            Xe;
         
+        epsbetahat = epsbeta;
+        epsbetahat[2] = log(epsbeta[2]);
+        epsbetahat[3] = log(epsbeta[3]);
+        
         Rinv_mult_E_mult_Reinv=Rinv*(err*Siginv);
 
         Xe = rep_matrix(0,Me,3);
@@ -209,7 +214,7 @@ transformed parameters{
         for (j in 2:3){
             Xe[,j] = vpow(epsexp,j-1);
         }
-        sig2epsv = sig2eps*inv_logit(Xe*epsbeta);
+        sig2epsv = sig2eps*inv_logit(Xe*epsbetahat);
         
         inv_sig2e = diag_matrix(vpow(sig2epsv,-1));
 

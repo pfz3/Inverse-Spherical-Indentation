@@ -403,7 +403,7 @@ for (fol in fols){
 }
 
 
-samples=df_files[c('ht','id','ind_no','date')]
+samples=df_files[df_files['rind']==500,][c('ht','id','ind_no','date')]
 
 pb = progress_bar$new(total=nrow(samples),format='evaluating trial points [:bar] :percent in :eta',width=60)
 for (row in 1:nrow(samples)){
@@ -456,7 +456,7 @@ for (row in 1:nrow(samples)){
     Yindprior=(Yindprior-scaling[1,2])/(scaling[2,2]-scaling[1,2])
 
 
-    sigprior = c(5,1)
+    sigprior = c(50,1)
     xprior=c(Eprior,Esig,Yindprior,0.5,0.5,1)
 
 
@@ -495,7 +495,7 @@ for (row in 1:nrow(samples)){
     as_vector=F,
     #  algorithm='Newton',
     #  tol_obj = 1e-4,
-    init = list('sig2eps'=0.005,'X'=c(0.5,0.5,0.1),'epsbeta'=rep(0,3)),
+    init = list('sig2eps'=0.005,'X'=c(0.5,0.5,0.1),'epsbeta'=rep(0.01,3)),
     iter=1000)
 
     sprintf('E=%1.1f GPa, sig0=%1.1f MPa, K=%1.1f GPa',map2$par$sX[1],map2$par$sX[2],map2$par$sX[3])
@@ -559,7 +559,7 @@ for (row in 1:nrow(samples)){
 
     mcmc <- stan(
     file='stage3.rstan',         # Stan program
-    data = c(inputdata2,list('epsbeta'=map2$par$epsbeta)),            # named list of data
+    data = c(inputdata2,list('epsbeta'=map2$par$epsbetahat)),            # named list of data
     chains = 1,                # number of Markov chains
     warmup=1000,               # warmup
     iter = 1000+10*1000,             # total number of iterations per chain
