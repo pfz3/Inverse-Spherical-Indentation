@@ -407,138 +407,159 @@ samples=df_files[c('ht','id','ind_no','date')]
 
 pb = progress_bar$new(total=nrow(samples),format='evaluating trial points [:bar] :percent in :eta',width=60)
 for (row in 1:nrow(samples)){
-  row  =  as.matrix(samples[row,])
-  
-  i100=as.integer(rownames(row))
-  
-  path = file.path(strsplit(as.character(df_files['file'][i100,][[1]]),'/')[[1]][1],
+    row  =  as.matrix(samples[row,])
+
+    i100=as.integer(rownames(row))
+
+    path = file.path(strsplit(as.character(df_files['file'][i100,][[1]]),'/')[[1]][1],
                    strsplit(as.character(df_files['file'][i100,][[1]]),'/')[[1]][2],
                    paste(row[1],'_SUMMARY_100'))
-  
-  ind_no=as.integer(as.character(df_files[i100,]['ind_no'][[1]]))
-  path = dirname(as.character(df_files[i100,]['file'][[1]]))
-  
-  dir.create(file.path(path,ind_no), showWarnings = FALSE)
-  do.call(file.remove,list(list.files(file.path(path,ind_no),full.names=T)))
 
-  count=0
-  
-  plot(0,0,xlim=c(0,0.05),ylim=c(0,5000),xlab='',ylab='')
-  title(ylab=TeX('$\\sigma_{o,ind}$  $(MPa)$'),xlab=TeX('$\\epsilon_{ind}$'))
+    ind_no=as.integer(as.character(df_files[i100,]['ind_no'][[1]]))
+    path = dirname(as.character(df_files[i100,]['file'][[1]]))
 
-  expdata  = read.csv(file.path(df_files['file'][[1]][i100]),header=FALSE,sep=",");
-  inds=sort(expdata[,1],decreasing=F,index.return=T)$ix
-  expdata[,1]=expdata[inds,1]
-  expdata[,2]=expdata[inds,2]
-  plot(expdata[seq(1,nrow(expdata),length.out=50),1],expdata[seq(1,nrow(expdata),length.out=50),2],
-         col='green',pch=16)
-  lines(expdata[,1],expdata[,2],col='green')
+    dir.create(file.path(path,ind_no), showWarnings = FALSE)
+    do.call(file.remove,list(list.files(file.path(path,ind_no),full.names=T)))
 
-  
-  expdata = expdata[which(expdata[,1]>e1)[1]:(min(which(expdata[,1]>e2)[1],nrow(expdata),na.rm=TRUE)-1),]
-  expdata[,1]=(expdata[,1]-ecenter)/escale
-  expdata[,2]=(expdata[,2]-ycenter)/yscale
-  eexp=seq(min(expdata[,1]),max(expdata[,1]),length.out = Mexp)
-  yexp = approx(expdata[,1],expdata[,2],eexp)$y
-  
-  
-  see=expdata[,1]*escale+ecenter
-  ss=expdata[,2]*yscale+ycenter
+    count=0
+
+    plot(0,0,xlim=c(0,0.05),ylim=c(0,5000),xlab='',ylab='')
+    title(ylab=TeX('$\\sigma_{o,ind}$  $(MPa)$'),xlab=TeX('$\\epsilon_{ind}$'))
+
+    expdata  = read.csv(file.path(df_files['file'][[1]][i100]),header=FALSE,sep=",");
+    inds=sort(expdata[,1],decreasing=F,index.return=T)$ix
+    expdata[,1]=expdata[inds,1]
+    expdata[,2]=expdata[inds,2]
+
+    expdata = expdata[which(expdata[,1]>e1)[1]:(min(which(expdata[,1]>e2)[1],nrow(expdata),na.rm=TRUE)-1),]
+    expdata[,1]=(expdata[,1]-ecenter)/escale
+    expdata[,2]=(expdata[,2]-ycenter)/yscale
+    eexp=seq(min(expdata[,1]),max(expdata[,1]),length.out = Mexp)
+    yexp = approx(expdata[,1],expdata[,2],eexp)$y
 
 
-  io=which(see>0.002)[1]
-  X=cbind(rep(1,io),see[1:io])
-  sig_int = (solve(t(X)%*%X,t(X)%*%ss[1:io])[1])/yscale
-  sig_int_sig = (sum(err**2)/(length(err)-1)*(solve(t(X)%*%X,diag(rep(1,2)))[1,1]))**0.5/yscale
-  Eprior=solve(t(X)%*%X,t(X)%*%ss[1:io])[2]
-  estar = see[which((ss-(see-0.001)*Eprior) < 0)[1]]
-  err = (ss[1:io]-solve(t(X)%*%X,t(X)%*%ss[1:io])[1]-see[1:io]*Eprior)
-  Esig = (sum(err**2)/(length(err)-1)*(solve(t(X)%*%X,diag(rep(1,2)))[2,2]))**0.5/1000/(scaling[2,1]-scaling[1,1])
-  Yindprior=which((ss-Eprior*(see-0.0002))<0)[1]
-  Yindprior=ss[Yindprior]/2
-  Eprior=((Eprior/1000)-scaling[1,1])/(scaling[2,1]-scaling[1,1])
-  Yindprior=(Yindprior-scaling[1,2])/(scaling[2,2]-scaling[1,2])
-  
-  
-  sigprior = c(500,1)
-  xprior=c(Eprior,Esig,Yindprior,0.5,0.1,1)
+    see=expdata[,1]*escale+ecenter
+    ss=expdata[,2]*yscale+ycenter
 
-  
-  inputdata2     = list(
-    N = dim(invCn)[1],
-    M = dim(invCm)[1],
-    xprior=xprior,
-    Me=Mexp,
-    yComp=as.vector(S),
-    Me = Mexp,
-    epsexp = eexp,
-    yObs =yexp,
-    xprior=xprior,
-    design=design_norm,
-    eps=e,
-    scaling=scaling,
-    yscaling=c(ycenter,yscale),
-    Rinv=invCn,
-    logdetR=logdetCn,
-    logdetSig=logdetCm,
-    Siginv=invCm,
-    phi=phi,
-    betax=betax,
-    mu=mu,
-    err=matrix(map1$par$err,nrow=nrow(S)),
-    lambdaprior=c(2,4),
-    sig_int_prior=c(sig_int,sig_int_sig),
-    estar=estar
-  )
-  
-  m2 = stan_model(file='stage2_epsflex_trans_intercept.rstan')
-  map2 <- optimizing(
+
+    io=which(see>0.002)[1]
+    X=cbind(rep(1,io),see[1:io])
+    Eprior=solve(t(X)%*%X,t(X)%*%ss[1:io])[2]
+    err = (ss[1:io]-solve(t(X)%*%X,t(X)%*%ss[1:io])[1]-see[1:io]*Eprior)
+    sig_int = (solve(t(X)%*%X,t(X)%*%ss[1:io])[1])/yscale
+    sig_int_sig = (sum(err**2)/(length(err)-1)*(solve(t(X)%*%X,diag(rep(1,2)))[1,1]))**0.5/yscale
+    estar = see[which((ss-(see-0.001)*Eprior) < 0)[1]]
+    Esig = (sum(err**2)/(length(err)-1)*(solve(t(X)%*%X,diag(rep(1,2)))[2,2]))**0.5/1000/(scaling[2,1]-scaling[1,1])*(1-0.3**2)
+    Yindprior=which((ss-Eprior*(see-0.0002))<0)[1]
+    Yindprior=ss[Yindprior]/2
+    Eprior=((Eprior*(1-0.3**2)/1000)-scaling[1,1])/(scaling[2,1]-scaling[1,1])
+    Yindprior=(Yindprior-scaling[1,2])/(scaling[2,2]-scaling[1,2])
+
+
+    sigprior = c(5,1)
+    xprior=c(Eprior,Esig,Yindprior,0.5,0.5,1)
+
+
+    inputdata2     = list(
+        N = dim(invCn)[1],
+        M = dim(invCm)[1],
+        xprior=xprior,
+        Me=Mexp,
+        yComp=as.vector(S),
+        Me = Mexp,
+        epsexp = eexp,
+        yObs =yexp-sig_int,
+        xprior=xprior,
+        design=design_norm,
+        eps=e,
+        scaling=scaling,
+        yscaling=c(ycenter,yscale),
+        Rinv=invCn,
+        logdetR=logdetCn,
+        logdetSig=logdetCm,
+        Siginv=invCm,
+        phi=phi,
+        betax=betax,
+        mu=mu,
+        err=matrix(map1$par$err,nrow=nrow(S)),
+        lambdaprior=c(2,4),
+        sig_int_prior=c(sig_int,sig_int_sig),
+        estar=estar
+    )
+
+    m2 = stan_model(file='stage2.rstan')
+    map2 <- optimizing(
     object=m2,                               # Stan program
     data = inputdata2,                       # named list of data
     verbose = T,
     as_vector=F,
     #  algorithm='Newton',
     #  tol_obj = 1e-4,
-    init = list('sig2eps'=0.005,'X'=c(0.5,0.5,0.1),'lambda'=0.2,"sig_int_sig"=sig_int),
+    init = list('sig2eps'=0.005,'X'=c(0.5,0.5,0.1),'epsbeta'=rep(0,3)),
     iter=1000)
-  
-    print(map2$par$sX)
-    print(sprintf('Sig_eps: %1.1f (MPa)',map2$par$sig2eps**0.5*yscale))
+
+    sprintf('E=%1.1f GPa, sig0=%1.1f MPa, K=%1.1f GPa',map2$par$sX[1],map2$par$sX[2],map2$par$sX[3])
     X_map=map2$par$X
     sig2eps_map=map2$par$sig2eps
     savefile=sprintf('%s/%i/%i_map_params.RData',path,ind_no,ind_no)
     save(list=c('X_map','sig2eps_map'),file=savefile)
 
-  
+
 
     #------------------------------------------------
     #    plot the fit
     #------------------------------------------------
-    png("fit_map.png", width=5, height=5, units="in", res=300)
+    savefile=sprintf('%s/%i/%i_fit_map.png',path,ind_no,ind_no)
+    png(savefile, width=5, height=5, units="in", res=300)
     x=map2$par$X
     par(mfrow=c(1,1),family='serif')
     plot(expdata[,1]*escale+ecenter,expdata[,2]*yscale+ycenter,
-         ylim=c(0,max(expdata[,2]*yscale+ycenter)),xlim=c(0,max(se)),
-         xlab=TeX('$\\epsilon$'),ylab=TeX('$\\sigma\\,\\,(MPa)$'),
-         family="serif",pch=16)
+     ylim=c(0,max(expdata[,2]*yscale+ycenter)),xlim=c(0,1.1*max(expdata[,1]*escale+ecenter)),
+     xlab=TeX('$\\epsilon$'),ylab=TeX('$\\sigma\\,\\,(MPa)$'),
+     family="serif",pch=16)
     rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "lightgrey", border = "black") 
     points(expdata[,1]*escale+ecenter,expdata[,2]*yscale+ycenter,
-           ylim=c(0,max(expdata[,2]*yscale+ycenter)),
-           xlab=TeX('$\\epsilon$'),ylab=TeX('$\\sigma\\,\\,(MPa)$'),
-           family="serif",pch=1,col='black')
-    points(eexp*escale+ecenter,yexp*yscale+ycenter,col='red')
-    lines(eexp*escale+ecenter,y_pred(x,eexp)$muhat*yscale+ycenter+(map2$par$sig_int*yscale),col='red',lwd=3)
+       ylim=c(0,max(expdata[,2]*yscale+ycenter)),
+       xlab=TeX('$\\epsilon$'),ylab=TeX('$\\sigma\\,\\,(MPa)$'),
+       family="serif",pch=1,col='black')
+    lines(eexp*escale+ecenter,(sig_int+y_pred(x,eexp)$muhat)*yscale+ycenter,col='red',lwd=1)
+
+
+
     dev.off()
-  
-  
-  ########################################################################
-  #         MCMC SAMPLING ON THETA/FRIC
-  ########################################################################
-  
-  
-  mcmc <- stan(
-    file='stage2_epsflex_trans_intercept.rstan',         # Stan program
-    data = inputdata2,            # named list of data
+    #------------------------------------------------
+    #    plot residuals
+    #------------------------------------------------
+    savefile=sprintf('%s/%i/%i_resid_map.png',path,ind_no,ind_no)
+    png(savefile, width=5, height=5, units="in", res=300)
+    x=map2$par$X
+    ub = 1.1*max(c(map2$par$sig2epsv**0.5*2*yscale,map2$par$err2*yscale))
+    lb = -ub
+
+    par(mfrow=c(1,1),family='serif')
+    plot(eexp*escale+ecenter,map2$par$sig2epsv**0.5*yscale,
+     ylim=c(lb,ub),xlim=c(0,max(eexp*escale+ecenter)),
+     xlab=TeX('$\\epsilon$'),ylab=TeX('$\\sigma\\,\\,(MPa)$'),
+     family="serif",pch=16)
+    rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "lightgrey", border = "black") 
+    lines(eexp*escale+ecenter,2*map2$par$sig2epsv**0.5*yscale,
+       xlab=TeX('$\\epsilon$'),ylab=TeX('$\\sigma\\,\\,(MPa)$'),
+       family="serif",pch=16)
+    lines(eexp*escale+ecenter,-2*map2$par$sig2epsv**0.5*yscale,
+      xlab=TeX('$\\epsilon$'),ylab=TeX('$\\sigma\\,\\,(MPa)$'),
+      family="serif",pch=16)
+    points(eexp*escale+ecenter,map2$par$err2*yscale,col='black')
+    title('Residuals and 95% Observation error bounds')
+    dev.off()
+
+    ########################################################################
+    #         MCMC SAMPLING ON THETA/FRIC
+    ########################################################################
+
+
+    mcmc <- stan(
+    file='stage3.rstan',         # Stan program
+    data = c(inputdata2,list('epsbeta'=map2$par$epsbeta)),            # named list of data
     chains = 1,                # number of Markov chains
     warmup=1000,               # warmup
     iter = 1000+10*1000,             # total number of iterations per chain
@@ -546,95 +567,110 @@ for (row in 1:nrow(samples)){
     refresh = 10*10,            # show progress every 'refresh' iterations
     thin =10 ,              # thining
     verbose=FALSE,
-    init = list(list('sig2eps'=sig2eps_map,'X'=X_map,'lambda'=map2$par$lambda,'sig_int'=map2$par$sig_int)))
-  
-  
-  savefile=sprintf('%s/%i/%i_summary_stats.txt',path,ind_no,ind_no)
-  s=summary(mcmc,pars=c('lp__','sX','sig2eps'))$summary
-  capture.output(s,file=savefile)
-  
-  
-  savefile=sprintf('%s/%i/%i_mcmc_chain.png',path,ind_no,ind_no)
-  png(savefile, width=5, height=5, units="in", res=300)
-  traceplot(mcmc,par=c('lp__','sX','sig2eps'), inc_warmup = F, nrow = 6)
-  dev.off()
-  
-  savefile=sprintf('%s/%i/%i_mcmc_params.RData',path,ind_no,ind_no)
-  mcmc = extract(mcmc,permuted=TRUE)
-  save(list=c('s','mcmc'),file=savefile)
-  
-  
-  savefile=sprintf('%s/%i/%i_mcmc_pairs.png',path,ind_no,ind_no)
-  png(savefile, width=5, height=5, units="in", res=300)
-  pairs(mcmc$sX)
-  dev.off()
-  
-  savefile=sprintf('%s/%i/%i_mcmc_post_sX.txt',path,ind_no,ind_no)
-  write.table(mcmc$sX, file=savefile, row.names=FALSE, col.names=FALSE)
-  
-  savefile=sprintf('%s/%i/%i_mcmc_hist.png',path,ind_no,ind_no)
-  png(savefile, width=5, height=5, units="in", res=300)
-  par(mfrow=c(1,3),family='serif')
-  hist(mcmc$sX[,1],breaks=20)
-  hist(mcmc$sX[,2],breaks=20)
-  hist(mcmc$sX[,3],breaks=20)
-  dev.off()
-  ########################################################################
-  #         MCMC POSTERIOR PREDICTIONS
-  ########################################################################
-  
-  
-  savefile=sprintf('%s/%i/%i_fit_mcmc_posterior_mean.png',path,ind_no,ind_no)
-  png(savefile, width=5, height=5, units="in", res=300)
-  par(mfrow=c(1,1),family='serif')
-  plot(expdata[,1]*escale+ecenter,expdata[,2]*yscale+ycenter,
-     ylim=c(0,max(expdata[,2]*yscale+ycenter)),xlim=c(0,max(se)),
-     xlab=TeX('$\\epsilon$'),ylab=TeX('$\\sigma\\,\\,(MPa)$'),
-     family="serif",pch=16)
-  rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "lightgrey", border = "black") 
-  points(expdata[,1]*escale+ecenter,expdata[,2]*yscale+ycenter,
-       ylim=c(0,max(expdata[,2]*yscale+ycenter)),
-       xlab=TeX('$\\epsilon$'),ylab=TeX('$\\sigma\\,\\,(MPa)$'),
-       family="serif",pch=1,col='black')
-  points(eexp*escale+ecenter,yexp*yscale+ycenter,col='red')
-  YP = t(sweep(apply(mcmc$X,1,function(x) y_pred(x,eexp)$muhat),2,mcmc$sig_int,'+'))*yscale+ycenter
-  lines(eexp*escale+ecenter,apply(YP,2,mean),col='red')
-  bnds = apply(YP,2,function(x) hdi(x,credMass=0.99))
-  polygon(c(eexp*escale+ecenter,rev(eexp*escale+ecenter)),
-        c(bnds[1,],rev(bnds[2,])),col=rgb(1,0,0,0.4),border=NA)
-  dev.off()
+    init = list(list('sig2eps'=sig2eps_map,'X'=X_map)))
 
-########################################################################
-#         residuals
-########################################################################
+    savefile=sprintf('%s/%i/%i_s_stats.txt',path,ind_no,ind_no)
+    s=summary(mcmc,pars=c('lp__','sX','sig2eps'))$summary
+    capture.output(s,file=savefile)
 
-  
-  savefile=sprintf('%s/%i/%i_fit_mcmc_residuals.png',path,ind_no,ind_no)
-  png(savefile, width=5, height=5, units="in", res=300)
-  par(mfrow=c(1,1),family='serif')
-  plot(eexp*escale+ecenter,apply(mcmc$err2,2,mean)*yscale,
-     ylim=c(min(mcmc$err2)*yscale,max(mcmc$err2)*yscale),xlim=c(0,max(se)),
-     xlab=TeX('$\\epsilon$'),ylab=TeX('$residual\\,\\,(MPa)$'),
-     family="serif",pch=16)
-  rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "lightgrey", border = "black") 
-  points(eexp*escale+ecenter,apply(mcmc$err2,2,mean)*yscale,
-       ylim=c(min(mcmc$err2)*yscale,max(mcmc$err2)*yscale),xlim=c(0,max(se)),
-       xlab=TeX('$\\epsilon$'),ylab=TeX('$residual\\,\\,(MPa)$'),
-       family="serif",pch=16)
-  bnds = apply(mcmc$err2*yscale,2,function(x) hdi(x,credMass=0.99))
-  polygon(c(eexp*escale+ecenter,rev(eexp*escale+ecenter)),
-        c(bnds[1,],rev(bnds[2,])),col=rgb(1,0,0,0.4),border=NA)
-  eline =sapply(1:length(eexp),function(i) mean(mcmc$sig2eps**0.5*yscale*(1+(1+mcmc$lambda)*exp(-4*(0.005-ecenter)/escale/eexp[i]))))*2
-  lines(eexp*escale+ecenter,eline,lwd=2,col='black')
-  lines(eexp*escale+ecenter,-1*eline,lwd=2,col='black')
-  dev.off()
+    
+    savefile=sprintf('%s/%i/%i_mcmc_chain.png',path,ind_no,ind_no)
+    png(savefile, width=5, height=5, units="in", res=300)
+    traceplot(mcmc,par=c('lp__','sX','sig2eps'), inc_warmup = F, nrow = 5)
+    dev.off()
+    
+    savefile=sprintf('%s/%i/%i_mcmc_params.RData',path,ind_no,ind_no)
+    mcmc = extract(mcmc,permuted=TRUE)
+    save(list=c('s','mcmc'),file=savefile)
 
-  
-  savefile=sprintf('%s/%i/%i_fit_mcmc_acf.png',path,ind_no,ind_no)
-  png(savefile, width=5, height=5, units="in", res=300)
-  acf(apply(mcmc$err2,2,mean))
-  dev.off()
-  pb$tick()
-  
+    
+    savefile=sprintf('%s/%i/%i_mcmc_pairs.png',path,ind_no,ind_no)
+    png(savefile, width=5, height=5, units="in", res=300)
+    pairs(mcmc$sX)
+    dev.off()
+    
+    savefile=sprintf('%s/%i/%i_mcmc_post_sX.txt',path,ind_no,ind_no)
+    write.table(mcmc$sX, file=savefile, row.names=FALSE, col.names=FALSE)
+    
+    savefile=sprintf('%s/%i/%i_mcmc_hist.png',path,ind_no,ind_no)
+    png(savefile, width=5, height=5, units="in", res=300)
+    par(mfrow=c(1,3),family='serif')
+    hist(mcmc$sX[,1],breaks=20)
+    hist(mcmc$sX[,2],breaks=20)
+    hist(mcmc$sX[,3],breaks=20)
+    dev.off()
+    ########################################################################
+    #         MCMC POSTERIOR PREDICTIONS
+    ########################################################################
+
+    
+    savefile=sprintf('%s/%i/%i_mcmc_posterior_mean.png',path,ind_no,ind_no)
+    png(savefile, width=5, height=5, units="in", res=300)
+    par(mfrow=c(1,1),family='serif')
+    plot(expdata[,1]*escale+ecenter,expdata[,2]*yscale+ycenter,
+         ylim=c(0,max(expdata[,2]*yscale+ycenter)),xlim=c(0,1.1*max(expdata[,1]*escale+ecenter)),
+         xlab=TeX('$\\epsilon$'),ylab=TeX('$\\sigma\\,\\,(MPa)$'),
+         family="serif",pch=16)
+    rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "lightgrey", border = "black") 
+    points(expdata[,1]*escale+ecenter,expdata[,2]*yscale+ycenter,
+           ylim=c(0,max(expdata[,2]*yscale+ycenter)),
+           xlab=TeX('$\\epsilon$'),ylab=TeX('$\\sigma\\,\\,(MPa)$'),
+           family="serif",pch=1,col='black')
+
+    YP = t(sweep(apply(mcmc$X,1,function(x) y_pred(x,eexp)$muhat),1,sig_int,'+')*yscale+ycenter)
+    lines(eexp*escale+ecenter,apply(YP,2,mean),col='red',lwd=1)
+    bnds = apply(YP,2,function(x) hdi(x,credMass=0.99))
+    polygon(c(eexp*escale+ecenter,rev(eexp*escale+ecenter)),
+          c(bnds[1,],rev(bnds[2,])),col=rgb(1,0,0,0.5),border=NA)
+    dev.off()
+
+    ########################################################################
+    #         residuals
+    ########################################################################
+
+      
+    
+    savefile=sprintf('%s/%i/%i_mcmc_residuals.png',path,ind_no,ind_no)
+    png(savefile, width=5, height=5, units="in", res=300)
+    par(mfrow=c(1,1),family='serif')
+    x=map2$par$X
+    ub = 1.1*max(c(mcmc$sig2epsv**0.5*2*yscale,mcmc$err2*yscale))
+    lb = -ub
+
+    par(mfrow=c(1,1),family='serif')
+    plot(eexp*escale+ecenter,apply(mcmc$sig2epsv**0.5*2*yscale,2,mean),
+         ylim=c(lb,ub),xlim=c(0,max(eexp*escale+ecenter)),
+         xlab=TeX('$\\epsilon$'),ylab=TeX('$\\sigma\\,\\,(MPa)$'),
+         family="serif",pch=16)
+    rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "lightgrey", border = "black") 
+    lines(eexp*escale+ecenter,apply(mcmc$sig2epsv**0.5*2*yscale,2,mean),
+          xlab=TeX('$\\epsilon$'),ylab=TeX('$\\sigma\\,\\,(MPa)$'),
+          family="serif",pch=16)
+    lines(eexp*escale+ecenter,apply(mcmc$sig2epsv**0.5*-2*yscale,2,mean),
+          xlab=TeX('$\\epsilon$'),ylab=TeX('$\\sigma\\,\\,(MPa)$'),
+          family="serif",pch=16)
+    points(eexp*escale+ecenter,apply(mcmc$err2*yscale,2,mean),col='black')
+
+    bnds = apply(mcmc$sig2epsv**0.5*2*yscale,2,function(x) hdi(x,credMass=0.99))
+    polygon(c(eexp*escale+ecenter,rev(eexp*escale+ecenter)),
+            c(bnds[1,],rev(bnds[2,])),col=rgb(0.3,0.3,0.3,0.4),border=NA)
+    polygon(c(eexp*escale+ecenter,rev(eexp*escale+ecenter)),
+            c(-bnds[1,],rev(-bnds[2,])),col=rgb(0.3,0.3,0.3,0.4),border=NA)
+
+    title('Mean residuals and 95% Observation error bounds')
+    dev.off()
+
+    ########################################################################
+    #         ACF
+    ########################################################################
+
+    
+    savefile=sprintf('%s/%i/%i_mcmc_acf.png',path,ind_no,ind_no)
+    png(savefile, width=5, height=5, units="in", res=300)
+    acf(apply(mcmc$err2,2,mean),main="")
+    title('ACF on the mean residuals')
+    dev.off()
+    pb$tick()
+
   
 }

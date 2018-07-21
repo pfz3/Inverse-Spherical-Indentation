@@ -386,15 +386,15 @@ ss=expdata[,2]*yscale+ycenter
 
 io=which(see>0.002)[1]
 X=cbind(rep(1,io),see[1:io])
+Eprior=solve(t(X)%*%X,t(X)%*%ss[1:io])[2]
+err = (ss[1:io]-solve(t(X)%*%X,t(X)%*%ss[1:io])[1]-see[1:io]*Eprior)
 sig_int = (solve(t(X)%*%X,t(X)%*%ss[1:io])[1])/yscale
 sig_int_sig = (sum(err**2)/(length(err)-1)*(solve(t(X)%*%X,diag(rep(1,2)))[1,1]))**0.5/yscale
-Eprior=solve(t(X)%*%X,t(X)%*%ss[1:io])[2]*(1-0.3**2)
 estar = see[which((ss-(see-0.001)*Eprior) < 0)[1]]
-err = (ss[1:io]-solve(t(X)%*%X,t(X)%*%ss[1:io])[1]-see[1:io]*Eprior)
 Esig = (sum(err**2)/(length(err)-1)*(solve(t(X)%*%X,diag(rep(1,2)))[2,2]))**0.5/1000/(scaling[2,1]-scaling[1,1])*(1-0.3**2)
 Yindprior=which((ss-Eprior*(see-0.0002))<0)[1]
 Yindprior=ss[Yindprior]/2
-Eprior=((Eprior/1000)-scaling[1,1])/(scaling[2,1]-scaling[1,1])
+Eprior=((Eprior*(1-0.3**2)/1000)-scaling[1,1])/(scaling[2,1]-scaling[1,1])
 Yindprior=(Yindprior-scaling[1,2])/(scaling[2,2]-scaling[1,2])
 
 
@@ -442,6 +442,7 @@ map2 <- optimizing(
 
 sprintf('E=%1.1f GPa, sig0=%1.1f MPa, K=%1.1f GPa',map2$par$sX[1],map2$par$sX[2],map2$par$sX[3])
 X_map=map2$par$X
+sig2eps_map=map2$par$sig2eps
 savefile=sprintf('%s/experimental/%s_map_params.RData',getwd(),strsplit(f,'.txt')[[1]])
 save(list=c('X_map','sig2eps_map'),file=savefile)
 
