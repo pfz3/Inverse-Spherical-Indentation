@@ -176,6 +176,7 @@ data {
   vector[2]                         lambdaprior;
   vector[6]                              xprior;
   matrix[N,M]                               err;
+  vector[6]                        epsbetaprior;
   
 }
 parameters {
@@ -204,8 +205,8 @@ transformed parameters{
         matrix[Me,3]                            Xe;
         
         epsbetahat = epsbeta;
-        epsbetahat[2] = log(epsbeta[2]);
-        epsbetahat[3] = log(epsbeta[3]);
+        epsbetahat[2] = exp(epsbeta[2]);
+        epsbetahat[3] = exp(epsbeta[3]);
         
         Rinv_mult_E_mult_Reinv=Rinv*(err*Siginv);
 
@@ -248,6 +249,11 @@ model {
     //   setup the priors
     //------------------------------------------
 
+    
+    epsbeta[1] ~ normal(epsbetaprior[1],epsbetaprior[2]);
+    epsbeta[2] ~ normal(epsbetaprior[3],epsbetaprior[4]);
+    epsbeta[3] ~ normal(epsbetaprior[5],epsbetaprior[6]);
+    
     1/sig2eps ~ gamma(sigprior[1],sigprior[2]);
 
     X[1] ~ normal(xprior[1],xprior[2]) T[0,1];

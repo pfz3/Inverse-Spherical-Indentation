@@ -484,7 +484,8 @@ for (row in 1:nrow(samples)){
         err=matrix(map1$par$err,nrow=nrow(S)),
         lambdaprior=c(2,4),
         sig_int_prior=c(sig_int,sig_int_sig),
-        estar=estar
+        estar=estar,
+        epsbetaprior=c(-5,1,0.5,1,1,1)
     )
 
     m2 = stan_model(file='stage2.rstan')
@@ -495,7 +496,7 @@ for (row in 1:nrow(samples)){
     as_vector=F,
     #  algorithm='Newton',
     #  tol_obj = 1e-4,
-    init = list('sig2eps'=0.005,'X'=c(0.5,0.5,0.1),'epsbeta'=rep(0.01,3)),
+    init = list('sig2eps'=0.005,'X'=c(0.5,0.5,0.1),'epsbeta'=c(5,0.5,1.2)),
     iter=1000)
 
     sprintf('E=%1.1f GPa, sig0=%1.1f MPa, K=%1.1f GPa',map2$par$sX[1],map2$par$sX[2],map2$par$sX[3])
@@ -556,18 +557,30 @@ for (row in 1:nrow(samples)){
     #         MCMC SAMPLING ON THETA/FRIC
     ########################################################################
 
+# 
+#     mcmc <- stan(
+#     file='stage2.rstan',         # Stan program
+#     data = c(inputdata2),            # named list of data
+#     chains = 1,                # number of Markov chains
+#     warmup=1000,               # warmup
+#     iter = 1000+10*1000,             # total number of iterations per chain
+#     cores = 4,                 # number of cores (using 2 just for the vignette)
+#     refresh = 10*10,            # show progress every 'refresh' iterations
+#     thin =10 ,              # thining
+#     verbose=FALSE,
+#     init = list(list('sig2eps'=sig2eps_map,'X'=X_map,'epsbeta'=map2$par$epsbeta)))
 
     mcmc <- stan(
-    file='stage3.rstan',         # Stan program
-    data = c(inputdata2,list('epsbeta'=map2$par$epsbetahat)),            # named list of data
-    chains = 1,                # number of Markov chains
-    warmup=1000,               # warmup
-    iter = 1000+10*1000,             # total number of iterations per chain
-    cores = 4,                 # number of cores (using 2 just for the vignette)
-    refresh = 10*10,            # show progress every 'refresh' iterations
-    thin =10 ,              # thining
-    verbose=FALSE,
-    init = list(list('sig2eps'=sig2eps_map,'X'=X_map)))
+      file='stage3.rstan',         # Stan program
+      data = c(inputdata2,list('epsbeta'=map2$par$epsbetahat)),            # named list of data
+      chains = 1,                # number of Markov chains
+      warmup=1000,               # warmup
+      iter = 1000+10*1000,             # total number of iterations per chain
+      cores = 4,                 # number of cores (using 2 just for the vignette)
+      refresh = 10*10,            # show progress every 'refresh' iterations
+      thin =10 ,              # thining
+      verbose=FALSE,
+      init = list(list('sig2eps'=sig2eps_map,'X'=X_map)))
 
     savefile=sprintf('%s/%i/%i_s_stats.txt',path,ind_no,ind_no)
     s=summary(mcmc,pars=c('lp__','sX','sig2eps'))$summary
