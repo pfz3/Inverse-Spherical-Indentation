@@ -485,7 +485,7 @@ for (row in 1:nrow(samples)){
         lambdaprior=c(2,4),
         sig_int_prior=c(sig_int,sig_int_sig),
         estar=estar,
-        epsbetaprior=c(-5,1,0.5,1,1,1)
+        epsbetaprior=c(-5,0.1,0.5,0.1,1,0.1)
     )
 
     m2 = stan_model(file='stage2.rstan')
