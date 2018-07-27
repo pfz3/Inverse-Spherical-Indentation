@@ -27,6 +27,12 @@ The surrogate was then programmed in the statistical programming language RStan 
 
 The model was built using 30 FE evaluations and validated on another 50-run MaxPro design. A "fancy" mean function was utilized that gets very "close" to emulating the FE model itself. Adding the GP on top of that makes things even better. The validation is exceptionally good [see pic](https://github.com/pfz3/Inverse-Spherical-Indentation/blob/master/val.png). The RMSPE is ~6 GPa... Try to beat that! I double-dog-dare you!
 
+## Codes
+
+The statistical GP model and regression problem can be found in the .rstan files. These contain the statistical models. stage1 is for building the GP, stage2 for regression including ALL unknown parameters (including noise parameters), and stage3 is for MCMC sampling from the regression problem. Note in stage3 some of the noise hyperparameters are fixed at the MAP (maximum a-postiori) values obtained at stage2. This helps in making sampling more efficient.
+
+There are two .R files: calibration.R and calibration_fol.R. The first fits a single experiment - you provide the path to the text file containing indentation stress-strain data. The second will "crawl" through folders and sequentially do the regression/inversion for each experiment.
+
 ## Example
 
 The FE summary outputs are provided as well as some experimental data. The FE simulations were run over a design that is considered to be appropriate for some of my other research work. Therefore do not expect that you can use this for steels, Ti-alloys, etc.. It MIGHT work for some aluminum alloys. Just pay attention to the bounds/constraints used and think if it will work for you. The FE surrogate model was built over a design with the following constraints on the elastic-linear-hardening constitutive model:
