@@ -29,7 +29,7 @@ The model was built using 30 FE evaluations and validated on another 50-run MaxP
 
 ## Example
 
-The FE summary outputs are provided as well as some experimental data. The FE simulations were run over a design that is considered to be appropriate for some of my other research work. Therefore do not expect that you can use this for steels, Ti-alloys, etc.. It MIGHT work for some aluminum alloys. Just pay attention to the bounds/constraints used and think if it will work for you. The constraints used in this set are:
+The FE summary outputs are provided as well as some experimental data. The FE simulations were run over a design that is considered to be appropriate for some of my other research work. Therefore do not expect that you can use this for steels, Ti-alloys, etc.. It MIGHT work for some aluminum alloys. Just pay attention to the bounds/constraints used and think if it will work for you. The FE surrogate model was built over a design with the following constraints on the elastic-linear-hardening constitutive model:
 
 - 50 < modulus < 200  (GPa)
 - 100 < yield < 1000  (MPa)
