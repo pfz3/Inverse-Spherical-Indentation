@@ -29,7 +29,14 @@ The model was built using 30 FE evaluations and validated on another 50-run MaxP
 
 ## Example
 
-The FE summary outputs are provided as well as some experimental data. The FE simulations were run over a design that is considered to be appropriate for some of my other research work. Therefore do not expect that you can use this for steels, Ti-alloys, etc.. It MIGHT work for some aluminum alloys. Just pay attention to the bounds/constraints used and think if it will work for you. If not, run your own FE simulations. All the scripts used to automate FE model submissions can be found in the folder "FE_scripting". This should get you started on manipulating .inp files, post processing results, submitting jobs in a HPC environment, etc..  
+The FE summary outputs are provided as well as some experimental data. The FE simulations were run over a design that is considered to be appropriate for some of my other research work. Therefore do not expect that you can use this for steels, Ti-alloys, etc.. It MIGHT work for some aluminum alloys. Just pay attention to the bounds/constraints used and think if it will work for you. The constraints used in this set are:
+
+- 50 < modulus < 200  (GPa)
+- 100 < yield < 1000  (MPa)
+- 10 < linear hardening rate < 200 (GPa)
+- modulus > linear hardening rate
+
+If these settings are not suitable for your problem, run your own FE simulations. All the scripts used to automate FE model submissions can be found in the folder "FE_scripting". This should get you started on manipulating .inp files, post processing results, submitting jobs in a HPC environment, etc..  
 
 Data from a single indentation experiment is provided. The material indented is a copper sample subject to severe plastic deformation. The [posterior predicted curve](https://github.com/pfz3/Inverse-Spherical-Indentation/blob/master/experimental/002_mcmc_posterior_mean.png) fits the data exceptionally well. Further, note that in this code some additional complexity is included to account for the apparent [heteroskedastic noise behavior](https://github.com/pfz3/Inverse-Spherical-Indentation/blob/master/experimental/002_mcmc_residuals.png). Attempts to use common transformation (Box-Cox) and also a more modern transformation ([Yeo-Johnson](https://academic.oup.com/biomet/article-abstract/87/4/954/232908)) were made yet neither was able to mitigate the observed heteroskedasticity.
 
